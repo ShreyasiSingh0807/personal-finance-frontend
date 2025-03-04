@@ -4,33 +4,46 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const API_URL = "https://personal-finance-api.onrender.com"; // Replace with your actual backend URL
+// ✅ Make sure this is the correct backend API URL from Render
+const API_URL = "https://personal-finance-backend-mfax.onrender.com"; // Replace this with your actual Render backend URL
 
 function App() {
   const [expenses, setExpenses] = useState([]);
   const [form, setForm] = useState({ date: "", category: "", amount: "", description: "" });
 
+  // ✅ Load expenses when the app starts
   useEffect(() => {
     fetchExpenses();
   }, []);
 
+  // ✅ Function to fetch expenses from the backend
   const fetchExpenses = async () => {
-    const response = await fetch(`${API_URL}/expenses/`);
-    const data = await response.json();
-    setExpenses(Array.isArray(data) ? data : []);
+    try {
+      const response = await fetch(`${API_URL}/expenses/`);
+      if (!response.ok) throw new Error("Failed to fetch expenses");
+      const data = await response.json();
+      setExpenses(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+    }
   };
 
+  // ✅ Function to add an expense
   const addExpense = async () => {
-    await fetch(`${API_URL}/expenses/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    fetchExpenses();
-    setForm({ date: "", category: "", amount: "", description: "" });
+    try {
+      await fetch(`${API_URL}/expenses/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      fetchExpenses(); // Reload the expenses after adding a new one
+      setForm({ date: "", category: "", amount: "", description: "" }); // Reset form
+    } catch (error) {
+      console.error("Error adding expense:", error);
+    }
   };
 
-  // **Process Data for Pie Chart**
+  // ✅ Process Data for Pie Chart
   const getCategoryTotals = () => {
     const categoryTotals = {};
     expenses.forEach((exp) => {
@@ -68,35 +81,4 @@ function App() {
         <thead>
           <tr style={{ backgroundColor: "#3498db", color: "white" }}>
             <th style={{ padding: "10px", border: "1px solid #ddd" }}>Date</th>
-            <th style={{ padding: "10px", border: "1px solid #ddd" }}>Category</th>
-            <th style={{ padding: "10px", border: "1px solid #ddd" }}>Amount</th>
-            <th style={{ padding: "10px", border: "1px solid #ddd" }}>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {expenses.length > 0 ? (
-            expenses.map((exp, index) => (
-              <tr key={index} style={{ borderBottom: "1px solid #ddd" }}>
-                <td style={{ padding: "10px" }}>{exp.date}</td>
-                <td style={{ padding: "10px" }}>{exp.category}</td>
-                <td style={{ padding: "10px" }}>{exp.amount}</td>
-                <td style={{ padding: "10px" }}>{exp.description}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="4" style={{ padding: "10px", textAlign: "center", color: "#999" }}>No expenses added yet.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-
-      <h2 style={{ marginTop: "30px", fontSize: "20px" }}>Expense Breakdown</h2>
-      <div style={{ width: "80%", maxWidth: "400px", margin: "auto" }}>
-        <Pie data={chartData} />
-      </div>
-    </div>
-  );
-}
-
-export default App;
+            <th style={{ padding: "10px", border: "1px solid
