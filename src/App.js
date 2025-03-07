@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Pie } from "react-chartjs-2";
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import "chart.js/auto";
 
-ChartJS.register(ArcElement, Tooltip, Legend);
-
-// ✅ Make sure this is the correct backend API URL from Render
-const API_URL = "https://personal-finance-backend-mfax.onrender.com"; // Replace this with your actual Render backend URL
+const API_URL = "https://personal-finance-backend-mfax.onrender.com";
 
 function App() {
   const [expenses, setExpenses] = useState([]);
   const [form, setForm] = useState({ date: "", category: "", amount: "", description: "" });
 
-  // ✅ Load expenses when the app starts
+  // ✅ Fetch expenses when the app starts
   useEffect(() => {
     fetchExpenses();
   }, []);
@@ -30,24 +27,35 @@ function App() {
 
   // ✅ Function to add an expense
   const addExpense = async () => {
+    if (!form.date || !form.category || !form.amount || !form.description) {
+      alert("Please fill all fields");
+      return;
+    }
+
     try {
-      await fetch(`${API_URL}/expenses/`, {
+      const response = await fetch(`${API_URL}/expenses/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      fetchExpenses(); // Reload the expenses after adding a new one
-      setForm({ date: "", category: "", amount: "", description: "" }); // Reset form
+
+      if (!response.ok) throw new Error("Failed to add expense");
+
+      setForm({ date: "", category: "", amount: "", description: "" });
+      fetchExpenses();
     } catch (error) {
       console.error("Error adding expense:", error);
     }
   };
 
-  // ✅ Process Data for Pie Chart
+  // ✅ Function to generate chart data
   const getCategoryTotals = () => {
     const categoryTotals = {};
     expenses.forEach((exp) => {
-      categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + parseFloat(exp.amount);
+      if (!categoryTotals[exp.category]) {
+        categoryTotals[exp.category] = 0;
+      }
+      categoryTotals[exp.category] += parseFloat(exp.amount);
     });
     return categoryTotals;
   };
@@ -64,21 +72,50 @@ function App() {
   };
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "700px", margin: "auto", textAlign: "center" }}>
-      <h1 style={{ color: "#2c3e50" }}>Personal Finance Tracker</h1>
+    <div style={{ textAlign: "center", padding: "20px", fontFamily: "Arial" }}>
+      <h1>Personal Finance Tracker - Latest Update</h1>
 
-      <h2 style={{ fontSize: "20px", marginBottom: "10px" }}>Add Expense</h2>
-      <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
-        <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} style={{ padding: "5px", width: "150px" }} />
-        <input type="text" placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} style={{ padding: "5px", width: "120px" }} />
-        <input type="number" placeholder="Amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} style={{ padding: "5px", width: "100px" }} />
-        <input type="text" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} style={{ padding: "5px", width: "150px" }} />
-        <button onClick={addExpense} style={{ padding: "5px 10px", backgroundColor: "#3498db", color: "white", border: "none", cursor: "pointer" }}>Add</button>
-      </div>
+      <h2>Add Expense</h2>
+      <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+      <input type="text" placeholder="Category" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+      <input type="number" placeholder="Amount" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+      <input type="text" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+      <button onClick={addExpense}>Add</button>
 
-      <h2 style={{ marginTop: "20px", fontSize: "20px" }}>Expense List</h2>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
+      <h2>Expense List</h2>
+      <table border="1" style={{ width: "80%", margin: "auto" }}>
         <thead>
-          <tr style={{ backgroundColor: "#3498db", color: "white" }}>
-            <th style={{ padding: "10px", border: "1px solid #ddd" }}>Date</th>
-            <th style={{ padding: "10px", border: "1px solid
+          <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Amount</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {expenses.length === 0 ? (
+            <tr>
+              <td colSpan="4" style={{ textAlign: "center" }}>No expenses added yet.</td>
+            </tr>
+          ) : (
+            expenses.map((exp, index) => (
+              <tr key={index}>
+                <td>{exp.date}</td>
+                <td>{exp.category}</td>
+                <td>{exp.amount}</td>
+                <td>{exp.description}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      <h2 style={{ marginTop: "30px" }}>Expense Breakdown</h2>
+      <div style={{ width: "80%", maxWidth: "400px", margin: "auto" }}>
+        {expenses.length > 0 ? <Pie data={chartData} /> : <p>No data to display</p>}
+      </div>
+    </div>
+  );
+}
+
+export default App;
